@@ -32,7 +32,7 @@ reboot:
     jmp 0xffff:0x0000
     
 
-entry_string: db "This is nth by KARTAVYA SHUKLA. Entrypoint initialized...", 0x0d, 0x0a, 0
+entry_string: db "This is nth by KARTAVYA SHUKLA.", 0x0d, 0x0a, "Entrypoint initialized...", 0x0d, 0x0a, 0
 exit_string: db "Press q (quit) to exit...", 0x0d, 0x0a, 0
 
 times 510 - ($ - $$) db 0
