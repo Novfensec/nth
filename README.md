@@ -1,2 +1,2 @@
 # nth
-nth is an open source kernel.
+nth is an open source bootloader.
