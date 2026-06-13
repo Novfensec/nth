@@ -7,7 +7,7 @@ nth is an open source bootloader.
 ## Windows
 
 > [!NOTE]
-> You must have Visual Studio or the standalone **Visual C++ Build Tools** installed (specifically the "Desktop development with C++" workload) for CMake to successfully generate the build files.*
+> You must have Visual Studio or the standalone **Visual C++ Build Tools** installed (specifically the "Desktop development with C++" workload) for CMake to successfully generate the build files.
 
 ```powershell
 # install visual studio build tools
