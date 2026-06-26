@@ -35,7 +35,9 @@ start:
     mov si, entry_string
     call print
     
-    jmp $
+    in al, 0x92
+    or al, 2
+    out 0x92, al
 
 print:
     mov ah, 0x0e
