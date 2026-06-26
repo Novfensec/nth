@@ -52,5 +52,21 @@ print:
 
 entry_string: db "This is NTH by KARTAVYA SHUKLA. Booting... Switching to 32-bit PM.", 0x0d, 0x0a, 0
 
+gdt_start:
+gdt_null:
+    dq 0x0
+gdt_code:
+    dw 0xFFFF, 0x0000, 0x9A00, 0x00CF
+gdt_data:
+    dw 0xFFFF, 0x0000, 0x9200, 0x00CF
+gdt_end:
+
+gdt_descriptor:
+    dw gdt_end - gdt_start - 1
+    dd gdt_start
+
+CODE_SEG equ gdt_code - gdt_start
+DATA_SEG equ gdt_data - gdt_start
+
 times 510 - ($-$$) db 0
 dw 0xaa55
