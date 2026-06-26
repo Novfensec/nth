@@ -77,5 +77,35 @@ gdt_descriptor:
 CODE_SEG equ gdt_code - gdt_start
 DATA_SEG equ gdt_data - gdt_start
 
+[bits 32]
+init_pm:
+    mov ax, DATA_SEG
+    mov ds, ax
+    mov ss, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    
+    mov ebp, 0x90000
+    mov esp, ebp
+    
+    mov esi, pm_string
+    mov edi, 0xB8000
+.print_vga:
+    lodsb
+    test al, al
+    jz .halt
+    mov [edi], al
+    inc edi
+    mov byte [edi], 0x0F
+    inc edi
+    jmp .print_vga
+
+.halt:
+    cli
+    hlt
+
+pm_string: db "Successfully entered 32-bit Protected Mode!", 0
+
 times 510 - ($-$$) db 0
 dw 0xaa55
