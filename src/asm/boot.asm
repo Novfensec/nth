@@ -1,39 +1,54 @@
 [org 0x7c00]
+[bits 16]
+
+jmp short start
+nop
+
+OEMLabel            db "NTHBOOT "
+BytesPerSector      dw 512
+SectorsPerCluster   db 1
+ReservedForBoot     dw 1
+NumberOfFATs        db 2
+RootDirEntries      dw 224
+LogicalSectors      dw 2880
+MediumByte          db 0xF0
+SectorsPerFat       dw 9
+SectorsPerTrack     dw 18
+Sides               dw 2
+HiddenSectors       dd 0
+LargeSectors        dd 0
+DriveNo             dw 0
+Signature           db 41
+VolumeID            dd 0x00000000
+VolumeLabel         db "NTH OS     "
+FileSystem          db "FAT12   "
 
 start:
+    xor ax, ax
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    mov sp, 0x7C00
+
+    mov [DriveNo], dl
+
     mov si, entry_string
     call print
-    jmp exit
+    
+    jmp $
 
 print:
     mov ah, 0x0e
 .loop:
-    mov al, [si]
-    cmp al, 0
-    je .done
-    inc si
+    lodsb
+    test al, al
+    jz .done
     int 0x10
     jmp .loop
 .done:
     ret
 
-exit:
-    mov si, exit_string
-    call print
-    mov ah, 0x00
-    int 0x16
-    cmp al, 'q'
-    je reboot
-    cmp al, 'Q'
-    je reboot
-    jmp exit
+entry_string: db "This is NTH by KARTAVYA SHUKLA. Booting... Switching to 32-bit PM.", 0x0d, 0x0a, 0
 
-reboot:
-    jmp 0xffff:0x0000
-    
-
-entry_string: db "This is nth by KARTAVYA SHUKLA.", 0x0d, 0x0a, "Entrypoint initialized...", 0x0d, 0x0a, 0
-exit_string: db "Press q (quit) to exit...", 0x0d, 0x0a, 0
-
-times 510 - ($ - $$) db 0
+times 510 - ($-$$) db 0
 dw 0xaa55
