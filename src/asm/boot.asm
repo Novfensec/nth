@@ -34,7 +34,18 @@ start:
 
     mov si, entry_string
     call print
-    
+
+    mov bx, 0x1000
+
+    mov ah, 0x02
+    mov al, 1
+    mov ch, 0
+    mov dh, 0
+    mov cl, 2
+    mov dl, [DriveNo]
+    int 0x13
+    jc disk_error
+
     in al, 0x92
     or al, 2
     out 0x92, al
@@ -48,6 +59,11 @@ start:
 
     jmp CODE_SEG:init_pm
 
+disk_error:
+    mov si, error_string
+    call print
+    jmp $
+
 print:
     mov ah, 0x0e
 .loop:
@@ -60,6 +76,7 @@ print:
     ret
 
 entry_string: db "This is NTH by KARTAVYA SHUKLA. Booting... Switching to 32-bit PM.", 0x0d, 0x0a, 0
+error_string: db "Disk Read Error!", 0x0d, 0x0a, 0
 
 gdt_start:
 gdt_null:
@@ -85,25 +102,23 @@ init_pm:
     mov es, ax
     mov fs, ax
     mov gs, ax
-    
+
     mov ebp, 0x90000
     mov esp, ebp
-    
     mov esi, pm_string
     mov edi, 0xB8000
 .print_vga:
     lodsb
     test al, al
-    jz .halt
+    jz .execute_kernel
     mov [edi], al
     inc edi
     mov byte [edi], 0x0F
     inc edi
     jmp .print_vga
 
-.halt:
-    cli
-    hlt
+.execute_kernel:
+    jmp 0x1000
 
 pm_string: db "Successfully entered 32-bit Protected Mode!", 0
 
