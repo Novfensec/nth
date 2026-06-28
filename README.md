@@ -9,6 +9,8 @@ nth is an open-source bootloader.
 > [!NOTE]
 > You must have Visual Studio or the standalone **Visual C++ Build Tools** installed (specifically the "Desktop development with C++" workload) for CMake to successfully generate the build files.
 
+- Install and extract [mtools for Windows](https://mirror.nju.edu.cn/msys2/mingw/mingw64/mingw-w64-x86_64-mtools-4.0.49-1-any.pkg.tar.zst), then add the extracted `bin` folder to your system's Environment Variables `Path`.
+
 ```powershell
 # install visual studio build tools
 winget install -e --id Microsoft.VisualStudio.BuildTools --override "--passive --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
@@ -35,21 +37,21 @@ Run the command corresponding to your distribution. This installs NASM, QEMU, CM
 
 ```bash
 sudo apt update
-sudo apt install nasm qemu-system-x86 cmake build-essential
+sudo apt install nasm qemu-system-x86 cmake build-essential mtools
 
 ```
 
 **Fedora**
 
 ```bash
-sudo dnf install nasm qemu-system-x86 cmake @development-tools
+sudo dnf install nasm qemu-system-x86 cmake @development-tools mtools
 
 ```
 
 **Arch Linux**
 
 ```bash
-sudo pacman -S nasm qemu-system-x86 cmake base-devel
+sudo pacman -S nasm qemu-system-x86 cmake base-devel mtools
 
 ```
 
@@ -83,8 +85,7 @@ To launch the compiled operating system image using QEMU, run the following comm
 
 > Terminal / PowerShell
 > ```shell
-> qemu-system-i386 -drive format=raw,file=build/osimages/nth_os.img
-> 
+> qemu-system-i386 -drive format=raw,file=build/osimages/nth_os.img,if=floppy
 > ```
 > 
 > 
