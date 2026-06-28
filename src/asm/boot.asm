@@ -29,22 +29,45 @@ start:
     mov es, ax
     mov ss, ax
     mov sp, 0x7C00
-
     mov [DriveNo], dl
 
     mov si, entry_string
     call print
 
-    mov bx, 0x1000
-
-    mov ah, 0x02
-    mov al, 1
-    mov ch, 0
-    mov dh, 0
-    mov cl, 2
-    mov dl, [DriveNo]
+    mov ah, 0
     int 0x13
     jc disk_error
+
+    mov ax, 19
+    mov cx, 14
+    mov bx, 0x7E00
+    call read_sectors
+
+    mov cx, [RootDirEntries]
+    mov di, 0x7E00
+.search_loop:
+    push cx
+    mov cx, 11
+    mov si, kernel_filename
+    push di
+    rep cmpsb
+    pop di
+    je .found_kernel
+    pop cx
+    add di, 32
+    loop .search_loop
+    jmp not_found_error
+
+.found_kernel:
+    pop cx
+    mov ax, [di + 26]
+    mov [kernel_cluster], ax
+
+    sub ax, 2
+    add ax, 33
+    mov cx, 1
+    mov bx, 0x1000
+    call read_sectors
 
     in al, 0x92
     or al, 2
@@ -59,8 +82,57 @@ start:
 
     jmp CODE_SEG:init_pm
 
+read_sectors:
+.read_loop:
+    push ax
+    push cx
+    push bx
+    call lba_to_chs
+    mov di, 3
+.retry:
+    mov ah, 0x02
+    mov al, 1
+    mov ch, [absolute_track]
+    mov cl, [absolute_sector]
+    mov dh, [absolute_head]
+    mov dl, [DriveNo]
+    int 0x13
+    jnc .read_success
+
+    xor ah, ah
+    int 0x13
+    dec di
+    jnz .retry
+
+    jmp disk_error
+
+.read_success:
+    pop bx
+    add bx, 512
+    pop cx
+    pop ax
+    inc ax
+    loop .read_loop
+    ret
+
+lba_to_chs:
+    xor dx, dx
+    div word [SectorsPerTrack]
+    inc dl
+    mov [absolute_sector], dl
+    xor dx, dx
+    div word [Sides]
+    mov [absolute_head], dl
+    mov [absolute_track], al
+    ret
+
 disk_error:
     mov si, error_string
+    call print
+    jmp $
+
+not_found_error:
+    mov si, not_found_msg
     call print
     jmp $
 
@@ -75,8 +147,15 @@ print:
 .done:
     ret
 
-entry_string: db "This is NTH by KARTAVYA SHUKLA. Booting... Switching to 32-bit PM.", 0x0d, 0x0a, 0
-error_string: db "Disk Read Error!", 0x0d, 0x0a, 0
+entry_string:   db "This is NTH by KARTAVYA SHUKLA.", 0x0d, 0x0a, 0
+error_string:   db "Disk Read Error!", 0x0d, 0x0a, 0
+kernel_filename db "KERNEL  BIN"
+not_found_msg:  db "KERNEL.BIN missing!", 0x0d, 0x0a, 0
+
+absolute_track  db 0
+absolute_sector db 0
+absolute_head   db 0
+kernel_cluster  dw 0
 
 gdt_start:
 gdt_null:
@@ -105,6 +184,7 @@ init_pm:
 
     mov ebp, 0x90000
     mov esp, ebp
+
     mov esi, pm_string
     mov edi, 0xB8000
 .print_vga:
