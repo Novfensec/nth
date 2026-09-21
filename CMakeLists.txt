@@ -1,70 +1,39 @@
 cmake_minimum_required(VERSION 3.15)
-project(nth NONE)
+project(nth_modern C)
 
-find_program(NASM_EXECUTABLE nasm REQUIRED)
+set(GNU_EFI_INCLUDE "/usr/include/efi")
+set(GNU_EFI_ARCH_INCLUDE "/usr/include/efi/x86_64")
+set(GNU_EFI_LIB "/usr/lib")
+set(EFI_CRT0 "/usr/lib/crt0-efi-x86_64.o")
+set(EFI_LDS "/usr/lib/elf_x86_64_efi.lds")
 
-find_program(DD_EXECUTABLE dd
-    PATHS 
-    "C:/Program Files/Git/usr/bin"
-    "C:/Program Files/Git/bin"
+set(CMAKE_C_FLAGS "-fpic -ffreestanding -fno-stack-protector -fno-strict-aliasing -fshort-wchar -mno-red-zone -Wall")
+add_library(bootloader SHARED src/boot.c src/file.c src/elf.c src/gop.c src/memory.c src/menu.c src/config.c)
+target_include_directories(bootloader PRIVATE ${GNU_EFI_INCLUDE} ${GNU_EFI_ARCH_INCLUDE})
+
+target_link_options(bootloader PRIVATE 
+    -nostdlib -Wl,-nostdlib -Wl,--warn-common -Wl,--no-undefined -Wl,--fatal-warnings 
+    -Wl,-shared -Wl,-Bsymbolic -L${GNU_EFI_LIB} -T${EFI_LDS} ${EFI_CRT0}
+)
+target_link_libraries(bootloader efi gnuefi)
+
+add_custom_command(TARGET bootloader POST_BUILD
+    COMMAND objcopy -j .text -j .sdata -j .data -j .dynamic -j .dynsym -j .rel 
+            -j .rela -j .reloc --target=efi-app-x86_64 
+            $<TARGET_FILE:bootloader> ${CMAKE_BINARY_DIR}/BOOTX64.EFI
 )
 
-find_program(MTOOLS_MFORMAT mformat)
-find_program(MTOOLS_MCOPY mcopy)
+set(KERNEL_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/kernel.c")
+set(KERNEL_LINKER "${CMAKE_CURRENT_SOURCE_DIR}/src/linker.ld")
+set(KERNEL_ELF "${CMAKE_CURRENT_SOURCE_DIR}/esp/kernel.elf")
 
-set(OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/bin")
-set(IMAGE_DIR "${CMAKE_CURRENT_BINARY_DIR}/osimages")
-file(MAKE_DIRECTORY ${OUTPUT_DIR} ${IMAGE_DIR})
-
-set(BOOT_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/boot.asm")
-set(KERNEL_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/kernel.asm")
-
-set(BOOT_BIN "${OUTPUT_DIR}/nth.bin")
-set(KERNEL_BIN "${OUTPUT_DIR}/kernel.bin")
-set(OS_IMAGE "${IMAGE_DIR}/nth_os.img")
+set(KERNEL_C_FLAGS -ffreestanding -mno-red-zone -Wall -Wextra -O2)
 
 add_custom_command(
-    OUTPUT ${BOOT_BIN}
-    COMMAND ${NASM_EXECUTABLE} -f bin ${BOOT_SRC} -o ${BOOT_BIN}
-    DEPENDS ${BOOT_SRC}
-    COMMENT "Assembling bootloader..."
-    VERBATIM
+    OUTPUT ${KERNEL_ELF}
+    COMMAND x86_64-elf-gcc ${KERNEL_C_FLAGS} -c ${KERNEL_SRC} -o ${CMAKE_CURRENT_BINARY_DIR}/kernel.o
+    COMMAND x86_64-elf-ld -T ${KERNEL_LINKER} ${CMAKE_CURRENT_BINARY_DIR}/kernel.o -o ${KERNEL_ELF}
+    DEPENDS ${KERNEL_SRC} ${KERNEL_LINKER}
 )
 
-add_custom_command(
-    OUTPUT ${KERNEL_BIN}
-    COMMAND ${NASM_EXECUTABLE} -f bin ${KERNEL_SRC} -o ${KERNEL_BIN}
-    DEPENDS ${KERNEL_SRC}
-    COMMENT "Assembling kernel..."
-    VERBATIM
-)
-
-if(DD_EXECUTABLE AND MTOOLS_MFORMAT AND MTOOLS_MCOPY)
-    add_custom_command(
-        OUTPUT ${OS_IMAGE}
-        COMMAND ${DD_EXECUTABLE} if=/dev/zero of=${OS_IMAGE} bs=512 count=2880 status=none
-        COMMAND ${MTOOLS_MFORMAT} -i ${OS_IMAGE} -f 1440 ::
-        COMMAND ${DD_EXECUTABLE} if=${BOOT_BIN} of=${OS_IMAGE} bs=512 count=1 conv=notrunc status=none
-        COMMAND ${MTOOLS_MCOPY} -i ${OS_IMAGE} ${KERNEL_BIN} ::/KERNEL.BIN
-        DEPENDS ${BOOT_BIN} ${KERNEL_BIN}
-        COMMENT "Generating and populating FAT12 disk image..."
-        VERBATIM
-    )
-else()
-    add_custom_command(
-        OUTPUT ${OS_IMAGE}
-        COMMAND ${CMAKE_COMMAND} -E rm -f ${OS_IMAGE}
-        COMMAND fsutil file createnew ${OS_IMAGE} 1474560
-        COMMAND ${CMAKE_COMMAND} -E echo "========================================================"
-        COMMAND ${CMAKE_COMMAND} -E echo " WARNING: 'dd' or 'mtools' not found in PATH."
-        COMMAND ${CMAKE_COMMAND} -E echo " You must manually format the image and copy the files."
-        COMMAND ${CMAKE_COMMAND} -E echo "========================================================"
-        DEPENDS ${BOOT_BIN} ${KERNEL_BIN}
-        COMMENT "Created blank image via fsutil. Manual FAT12 population required."
-        VERBATIM
-    )
-endif()
-
-add_custom_target(nth ALL DEPENDS ${OS_IMAGE})
-
-set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${OUTPUT_DIR};${IMAGE_DIR}")
+add_custom_target(kernel ALL DEPENDS ${KERNEL_ELF})
