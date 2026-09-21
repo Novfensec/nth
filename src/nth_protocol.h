@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-typedef struct {
+typedef struct
+{
     uint64_t BaseAddress;
     uint64_t BufferSize;
     uint32_t Width;
@@ -11,12 +12,13 @@ typedef struct {
     uint32_t PixelsPerScanLine;
 } NthFramebuffer;
 
-typedef struct {
-    NthFramebuffer* Framebuffer;
-    void* MemoryMap;
+typedef struct
+{
+    NthFramebuffer *Framebuffer;
+    void *MemoryMap;
     uint64_t MapSize;
     uint64_t DescriptorSize;
-    void* Rsdp;
+    void *Rsdp;
 } NthBootInfo;
 
 #endif

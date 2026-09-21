@@ -5,11 +5,12 @@
 #include <efilib.h>
 #include "gop.h"
 
-typedef struct {
-    CHAR16* Name;
-    CHAR16* KernelPath;
+typedef struct
+{
+    CHAR16 *Name;
+    CHAR16 *KernelPath;
 } BootEntry;
 
-CHAR16* ShowGraphicalMenu(EFI_SYSTEM_TABLE *SystemTable, Framebuffer* fb, BootEntry* Entries, UINTN EntryCount);
+CHAR16 *ShowGraphicalMenu(EFI_SYSTEM_TABLE *SystemTable, Framebuffer *fb, BootEntry *Entries, UINTN EntryCount);
 
 #endif

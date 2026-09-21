@@ -1,6 +1,7 @@
 #include "memory.h"
 
-EFI_STATUS ReadMemoryMap(EFI_MEMORY_DESCRIPTOR** Map, UINTN* MapSize, UINTN* MapKey, UINTN* DescriptorSize) {
+EFI_STATUS ReadMemoryMap(EFI_MEMORY_DESCRIPTOR **Map, UINTN *MapSize, UINTN *MapKey, UINTN *DescriptorSize)
+{
     UINT32 DescriptorVersion;
     *MapSize = 0;
     *Map = NULL;
@@ -9,8 +10,9 @@ EFI_STATUS ReadMemoryMap(EFI_MEMORY_DESCRIPTOR** Map, UINTN* MapSize, UINTN* Map
 
     *MapSize += *DescriptorSize * 2;
 
-    EFI_STATUS Status = uefi_call_wrapper(BS->AllocatePool, 3, EfiLoaderData, *MapSize, (VOID**)Map);
-    if (EFI_ERROR(Status)) {
+    EFI_STATUS Status = uefi_call_wrapper(BS->AllocatePool, 3, EfiLoaderData, *MapSize, (VOID **)Map);
+    if (EFI_ERROR(Status))
+    {
         return Status;
     }
 

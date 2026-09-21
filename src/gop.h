@@ -4,7 +4,8 @@
 #include <efi.h>
 #include <efilib.h>
 
-typedef struct {
+typedef struct
+{
     UINT64 BaseAddress;
     UINT64 BufferSize;
     UINT32 Width;
@@ -12,6 +13,6 @@ typedef struct {
     UINT32 PixelsPerScanLine;
 } Framebuffer;
 
-EFI_STATUS InitializeGOP(Framebuffer* fb);
+EFI_STATUS InitializeGOP(Framebuffer *fb);
 
 #endif

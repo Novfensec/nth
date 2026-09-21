@@ -6,8 +6,9 @@
 
 #define PT_LOAD 1
 
-typedef struct {
-    UINT8  e_ident[16];
+typedef struct
+{
+    UINT8 e_ident[16];
     UINT16 e_type;
     UINT16 e_machine;
     UINT32 e_version;
@@ -23,7 +24,8 @@ typedef struct {
     UINT16 e_shstrndx;
 } Elf64_Ehdr;
 
-typedef struct {
+typedef struct
+{
     UINT32 p_type;
     UINT32 p_flags;
     UINT64 p_offset;
@@ -34,7 +36,7 @@ typedef struct {
     UINT64 p_align;
 } Elf64_Phdr;
 
-BOOLEAN ValidateELF(VOID* FileBuffer);
-UINT64 LoadELF(VOID* FileBuffer);
+BOOLEAN ValidateELF(VOID *FileBuffer);
+UINT64 LoadELF(VOID *FileBuffer);
 
 #endif

@@ -8,7 +8,8 @@
 #include "menu.h"
 #include "config.h"
 
-EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
+EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
+{
     InitializeLib(ImageHandle, SystemTable);
 
     Framebuffer fb;
@@ -17,13 +18,16 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
     BootEntry entries[10];
     UINTN entry_count = 0;
 
-    VOID* ConfigBuffer = NULL;
+    VOID *ConfigBuffer = NULL;
     UINTN ConfigSize = 0;
 
-    if (!EFI_ERROR(LoadFile(ImageHandle, L"\\nth.cfg", &ConfigBuffer, &ConfigSize))) {
+    if (!EFI_ERROR(LoadFile(ImageHandle, L"\\nth.cfg", &ConfigBuffer, &ConfigSize)))
+    {
         entry_count = ParseConfig(ConfigBuffer, ConfigSize, entries, 9);
         uefi_call_wrapper(BS->FreePool, 1, ConfigBuffer);
-    } else {
+    }
+    else
+    {
         entries[0].Name = L"NTH OS (Default)";
         entries[0].KernelPath = L"\\kernel.elf";
         entry_count = 1;
@@ -33,18 +37,19 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
     entries[entry_count].KernelPath = NULL;
     entry_count++;
 
-    CHAR16* SelectedKernel = ShowGraphicalMenu(SystemTable, &fb, entries, entry_count);
+    CHAR16 *SelectedKernel = ShowGraphicalMenu(SystemTable, &fb, entries, entry_count);
 
-    if (SelectedKernel == NULL) {
+    if (SelectedKernel == NULL)
+    {
         uefi_call_wrapper(RT->ResetSystem, 4, EfiResetCold, EFI_SUCCESS, 0, NULL);
     }
 
-    VOID* KernelBuffer = NULL;
+    VOID *KernelBuffer = NULL;
     UINTN KernelSize = 0;
     LoadFile(ImageHandle, SelectedKernel, &KernelBuffer, &KernelSize);
 
     UINT64 EntryPoint = LoadELF(KernelBuffer);
-    typedef void (*KernelStart)(NthBootInfo*);
+    typedef void (*KernelStart)(NthBootInfo *);
     KernelStart kernel_main = (KernelStart)EntryPoint;
 
     NthFramebuffer boot_fb;
@@ -54,38 +59,42 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
     boot_fb.Height = fb.Height;
     boot_fb.PixelsPerScanLine = fb.PixelsPerScanLine;
 
-    EFI_MEMORY_DESCRIPTOR* MemoryMap = NULL;
+    EFI_MEMORY_DESCRIPTOR *MemoryMap = NULL;
     UINTN MapSize, MapKey, DescriptorSize;
     ReadMemoryMap(&MemoryMap, &MapSize, &MapKey, &DescriptorSize);
 
-    void* rsdp = NULL;
+    void *rsdp = NULL;
     EFI_GUID Acpi2TableGuid = ACPI_20_TABLE_GUID;
 
-    for (UINTN i = 0; i < SystemTable->NumberOfTableEntries; i++) {
-        if (CompareGuid(&SystemTable->ConfigurationTable[i].VendorGuid, &Acpi2TableGuid) == 0) {
+    for (UINTN i = 0; i < SystemTable->NumberOfTableEntries; i++)
+    {
+        if (CompareGuid(&SystemTable->ConfigurationTable[i].VendorGuid, &Acpi2TableGuid) == 0)
+        {
             rsdp = SystemTable->ConfigurationTable[i].VendorTable;
             break;
         }
     }
 
     EFI_STATUS Status = uefi_call_wrapper(BS->ExitBootServices, 2, ImageHandle, MapKey);
-    if (EFI_ERROR(Status)) {
+    if (EFI_ERROR(Status))
+    {
         ReadMemoryMap(&MemoryMap, &MapSize, &MapKey, &DescriptorSize);
         uefi_call_wrapper(BS->ExitBootServices, 2, ImageHandle, MapKey);
     }
 
     NthBootInfo boot_info;
     boot_info.Framebuffer = &boot_fb;
-    boot_info.MemoryMap = (void*)MemoryMap;
+    boot_info.MemoryMap = (void *)MemoryMap;
     boot_info.MapSize = MapSize;
     boot_info.DescriptorSize = DescriptorSize;
     boot_info.Rsdp = rsdp;
 
     kernel_main(&boot_info);
 
-    while(1) {
+    while (1)
+    {
         __asm__("hlt");
     }
-    
+
     return EFI_SUCCESS;
 }
