@@ -4,7 +4,7 @@
 #include "elf.h"
 #include "gop.h"
 #include "memory.h"
-#include "boot_info.h"
+#include "nth_protocol.h"
 #include "menu.h"
 #include "config.h"
 
@@ -44,10 +44,10 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
     LoadFile(ImageHandle, SelectedKernel, &KernelBuffer, &KernelSize);
 
     UINT64 EntryPoint = LoadELF(KernelBuffer);
-    typedef void (*KernelStart)(BootInfo*);
+    typedef void (*KernelStart)(NthBootInfo*);
     KernelStart kernel_main = (KernelStart)EntryPoint;
 
-    BootFramebuffer boot_fb;
+    NthFramebuffer boot_fb;
     boot_fb.BaseAddress = fb.BaseAddress;
     boot_fb.BufferSize = fb.BufferSize;
     boot_fb.Width = fb.Width;
@@ -58,17 +58,28 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
     UINTN MapSize, MapKey, DescriptorSize;
     ReadMemoryMap(&MemoryMap, &MapSize, &MapKey, &DescriptorSize);
 
+    void* rsdp = NULL;
+    EFI_GUID Acpi2TableGuid = ACPI_20_TABLE_GUID;
+
+    for (UINTN i = 0; i < SystemTable->NumberOfTableEntries; i++) {
+        if (CompareGuid(&SystemTable->ConfigurationTable[i].VendorGuid, &Acpi2TableGuid) == 0) {
+            rsdp = SystemTable->ConfigurationTable[i].VendorTable;
+            break;
+        }
+    }
+
     EFI_STATUS Status = uefi_call_wrapper(BS->ExitBootServices, 2, ImageHandle, MapKey);
     if (EFI_ERROR(Status)) {
         ReadMemoryMap(&MemoryMap, &MapSize, &MapKey, &DescriptorSize);
         uefi_call_wrapper(BS->ExitBootServices, 2, ImageHandle, MapKey);
     }
 
-    BootInfo boot_info;
+    NthBootInfo boot_info;
     boot_info.Framebuffer = &boot_fb;
     boot_info.MemoryMap = (void*)MemoryMap;
     boot_info.MapSize = MapSize;
     boot_info.DescriptorSize = DescriptorSize;
+    boot_info.Rsdp = rsdp;
 
     kernel_main(&boot_info);
 

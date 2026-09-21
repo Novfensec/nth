@@ -1,5 +1,5 @@
-#ifndef BOOT_INFO_H
-#define BOOT_INFO_H
+#ifndef NTH_PROTOCOL_H
+#define NTH_PROTOCOL_H
 
 #include <stdint.h>
 
@@ -9,13 +9,14 @@ typedef struct {
     uint32_t Width;
     uint32_t Height;
     uint32_t PixelsPerScanLine;
-} BootFramebuffer;
+} NthFramebuffer;
 
 typedef struct {
-    BootFramebuffer* Framebuffer;
+    NthFramebuffer* Framebuffer;
     void* MemoryMap;
     uint64_t MapSize;
     uint64_t DescriptorSize;
-} BootInfo;
+    void* Rsdp;
+} NthBootInfo;
 
 #endif

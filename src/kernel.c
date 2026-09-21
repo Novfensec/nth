@@ -1,14 +1,14 @@
-#include "boot_info.h"
+#include "nth_protocol.h"
 #include "font.h"
 #include <stdint.h>
 
-void draw_pixel(BootFramebuffer* fb, uint32_t x, uint32_t y, uint32_t color) {
+void draw_pixel(NthFramebuffer* fb, uint32_t x, uint32_t y, uint32_t color) {
     if (x >= fb->Width || y >= fb->Height) return;
     uint32_t* video_memory = (uint32_t*)fb->BaseAddress;
     video_memory[y * fb->PixelsPerScanLine + x] = color;
 }
 
-void draw_char(BootFramebuffer* fb, char c, uint32_t x, uint32_t y, uint32_t scale, uint32_t color) {
+void draw_char(NthFramebuffer* fb, char c, uint32_t x, uint32_t y, uint32_t scale, uint32_t color) {
     if (c < 32 || c > 127) return;
 
     uint8_t* glyph = (uint8_t*)font8x8[(int)c - 32];
@@ -26,7 +26,7 @@ void draw_char(BootFramebuffer* fb, char c, uint32_t x, uint32_t y, uint32_t sca
     }
 }
 
-void draw_string(BootFramebuffer* fb, const char* str, uint32_t x, uint32_t y, uint32_t scale, uint32_t color) {
+void draw_string(NthFramebuffer* fb, const char* str, uint32_t x, uint32_t y, uint32_t scale, uint32_t color) {
     while (*str) {
         draw_char(fb, *str, x, y, scale, color);
         x += 8 * scale;
@@ -34,8 +34,8 @@ void draw_string(BootFramebuffer* fb, const char* str, uint32_t x, uint32_t y, u
     }
 }
 
-void kernel_main(BootInfo* boot_info) {
-    BootFramebuffer* fb = boot_info->Framebuffer;
+void kernel_main(NthBootInfo* boot_info) {
+    NthFramebuffer* fb = boot_info->Framebuffer;
     uint32_t* video_memory = (uint32_t*)fb->BaseAddress;
 
     for (uint32_t y = 0; y < fb->Height; y++) {
