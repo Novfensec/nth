@@ -4,90 +4,123 @@ nth is an open-source bootloader.
 
 ## Setup
 
-### Windows
+### Prerequisites (Linux / WSL)
 
-> [!NOTE]
-> You must have Visual Studio or the standalone **Visual C++ Build Tools** installed (specifically the "Desktop development with C++" workload) for CMake to successfully generate the build files.
+The project requires an `x86_64-elf` cross-compiler and the `gnu-efi` library. The build system relies on standard Ubuntu/Debian paths for `gnu-efi`.
 
-- Install and extract [mtools for Windows](https://mirror.nju.edu.cn/msys2/mingw/mingw64/mingw-w64-x86_64-mtools-4.0.49-1-any.pkg.tar.zst), then add the extracted `bin` folder to your system's Environment Variables `Path`.
+1. **Install dependencies:**
 
-```powershell
-# install visual studio build tools
-winget install -e --id Microsoft.VisualStudio.BuildTools --override "--passive --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+   **Ubuntu / Debian**
+   ```bash
+   sudo apt update
+   sudo apt install -y build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo wget cmake mtools xorriso dosfstools qemu-system-x86 gnu-efi
+   ```
+   *Note: `dosfstools` provides `mkfs.vfat`, `mtools` provides `mcopy`/`mmd`, and `gnu-efi` provides the UEFI headers and libraries.*
 
-# install git (required for Git Bash and Unix utilities like dd)
-winget install -e --id Git.Git
+2. **Build the Cross-Compiler:**
 
-# install nasm
-winget install -e --id NASM.NASM
-
-# install qemu
-winget install -e --id SoftwareFreedomConservancy.QEMU
-
-# install cmake
-winget install -e --id Kitware.CMake
-
-```
-
-### Linux
-
-Run the command corresponding to your distribution. This installs NASM, QEMU, CMake, and the standard compiler toolchains (the Linux equivalent of the C++ Build Tools).
-
-**Ubuntu / Debian**
-
-```bash
-sudo apt update
-sudo apt install nasm qemu-system-x86 cmake build-essential mtools
-
-```
-
-**Fedora**
-
-```bash
-sudo dnf install nasm qemu-system-x86 cmake @development-tools mtools
-
-```
-
-**Arch Linux**
-
-```bash
-sudo pacman -S nasm qemu-system-x86 cmake base-devel mtools
-
-```
+   Run the provided script to build `x86_64-elf-gcc` and `x86_64-elf-ld`:
+   ```bash
+   ./build_gnu_cc.sh
+   ```
+   Once the build is complete, you must add the cross-compiler to your environment variable `PATH` (the script will output the exact export command, usually `export PATH="$HOME/opt/cross/bin:$PATH"`).
 
 ## Build Instructions
 
+To build the UEFI bootloader (`BOOTX64.EFI`) and kernel (`kernel.elf`), and then pack them into a bootable ISO image (`nth_os.iso`):
+
+```bash
+./mk_iso.sh
+```
+
+This script will automatically:
+1. Configure and compile the project via CMake in the `build/` directory.
+2. Create an EFI system partition image (`efi.img`).
+3. Copy the compiled EFI bootloader and kernel into the partition.
+4. Generate the final `nth_os.iso` using `xorriso`.
+5. Launch the ISO in QEMU using OVMF UEFI firmware.
+
+Alternatively, if you only want to build the files and run QEMU directly via a local FAT directory (without creating an ISO), you can run:
+```bash
+./build_and_run.sh
+```
+
+## Booting Manually
+
+To manually launch the generated ISO using QEMU, you need the OVMF UEFI firmware files. Run the following command from the root directory:
+
+```bash
+qemu-system-x86_64 \
+    -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
+    -drive if=pflash,format=raw,file=OVMF_VARS_4M.fd \
+    -cdrom nth_os.iso \
+    -m 256M
+```
+
 > [!TIP]
-> Prebuilt images for the dummy OS can be found in the **prebuilt-images/** directory.
+> If you need to access the OVMF UEFI firmware settings (the built-in UEFI Boot Manager), press the `ESC` key rapidly as soon as the QEMU window appears.
 
-> Terminal / PowerShell
-> ```shell
-> mkdir build; cd build
-> cmake ..
-> cmake --build .
-> 
-> ```
-> 
-> 
+## Custom Kernels / Boot Protocol
 
-Once the build process completes successfully, the compiled binaries and the final bootable disk image will be generated in the following directories:
+`nth` can boot any custom kernel that adheres to its boot protocol. The kernel must be compiled as a **64-bit ELF executable** (`x86_64-elf`).
 
-* **Binaries:** `build/bin/` (contains individual files like `nth.bin` and `kernel.bin`)
-* **OS Image:** `build/osimages/` (contains the final spliced `nth_os.img`)
+### Boot Manager Tricks (`nth.cfg`)
 
-![Directory Structure](assets/dirbin.png)
-![Directory Structure](assets/dirimage.png)
+The bootloader features a built-in graphical boot manager. It populates its menu by parsing an `nth.cfg` file located in the root of the EFI partition. You can define up to 9 custom kernel entries in this file, using the simple `Name=Path` format:
 
+```ini
+NTH OS=\kernel.elf
+My Custom Kernel=\vmlinuz
+Memory Tester=\memtest.elf
+```
 
-## Booting
+If `nth.cfg` is missing or fails to load, the boot manager will default to attempting to load `\kernel.elf`. A "Reboot System" option is always appended to the end of the menu automatically.
 
-To launch the compiled operating system image using QEMU, run the following command from the root directory:
+### Linking Your Kernel (`linker.ld`)
 
-> Terminal / PowerShell
-> ```shell
-> qemu-system-i386 -drive format=raw,file=build/osimages/nth_os.img,if=floppy
-> ```
-> 
-> 
+When writing your own kernel, your linker script (`linker.ld`) can specify any virtual base address (for example, the default `nth` kernel uses `. = 0x100000;` for physical identity mapping at the 1MB mark). 
 
-![Directory Structure](assets/qemuwindow.png)
+The bootloader dynamically reads the `e_entry` field from the ELF header to determine the entry point. This means you can name your entry function whatever you like (`_start`, `kernel_main`, etc.) as long as it is correctly specified via the `ENTRY()` directive in your linker script.
+
+### The Handoff Protocol
+
+When the bootloader transfers control to your kernel's entry point, it passes a pointer to an `NthBootInfo` structure as the first argument (System V ABI, passed in the `%rdi` register).
+
+You should include the following definitions in your kernel code to interface with the bootloader:
+
+```c
+#include <stdint.h>
+
+typedef struct {
+    uint64_t BaseAddress;      // Physical base address of the framebuffer
+    uint64_t BufferSize;       // Size of the framebuffer in bytes
+    uint32_t Width;            // Screen width in pixels
+    uint32_t Height;           // Screen height in pixels
+    uint32_t PixelsPerScanLine;// Pixels per scanline (may include padding)
+} NthFramebuffer;
+
+typedef struct {
+    NthFramebuffer *Framebuffer;
+    void *MemoryMap;           // Pointer to the UEFI Memory Map
+    uint64_t MapSize;          // Total size of the memory map in bytes
+    uint64_t DescriptorSize;   // Size of each memory descriptor entry
+    void *Rsdp;                // Pointer to the ACPI RSDP table (for ACPI 2.0+)
+} NthBootInfo;
+```
+
+Your kernel entry point must accept this parameter. For example:
+
+```c
+void kernel_main(NthBootInfo *boot_info) {
+    // Use boot_info->Framebuffer to draw to the screen
+    // Parse boot_info->MemoryMap to set up physical memory management
+    // Read boot_info->Rsdp to initialize ACPI
+    
+    while (1) {
+        __asm__("hlt");
+    }
+}
+```
+
+> [!Note]
+> By the time your kernel executes, `nth` will have successfully exited UEFI Boot Services and initialized the linear GOP framebuffer. You are in 64-bit long mode without a GDT or IDT set up.
