@@ -19,22 +19,22 @@ extern "C"
 
     typedef enum
     {
-        EfiReservedMemoryType,
-        EfiLoaderCode,
-        EfiLoaderData,
-        EfiBootServicesCode,
-        EfiBootServicesData,
-        EfiRuntimeServicesCode,
-        EfiRuntimeServicesData,
-        EfiConventionalMemory,
-        EfiUnusableMemory,
-        EfiACPIReclaimMemory,
-        EfiACPIMemoryNVS,
-        EfiMemoryMappedIO,
-        EfiMemoryMappedIOPortSpace,
-        EfiPalCode,
-        EfiPersistentMemory,
-        EfiMaxMemoryType
+        NthEfiReservedMemoryType,
+        NthEfiLoaderCode,
+        NthEfiLoaderData,
+        NthEfiBootServicesCode,
+        NthEfiBootServicesData,
+        NthEfiRuntimeServicesCode,
+        NthEfiRuntimeServicesData,
+        NthEfiConventionalMemory,
+        NthEfiUnusableMemory,
+        NthEfiACPIReclaimMemory,
+        NthEfiACPIMemoryNVS,
+        NthEfiMemoryMappedIO,
+        NthEfiMemoryMappedIOPortSpace,
+        NthEfiPalCode,
+        NthEfiPersistentMemory,
+        NthEfiMaxMemoryType
     } NthMemoryType;
 
     typedef struct
