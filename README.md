@@ -1,8 +1,6 @@
 # nth
 
-### What is nth?
-
-`nth` is an open-source, universal UEFI bootloader and the reference implementation for the `nth` boot protocol. It provides a built-in graphical boot manager and supports booting 64-bit ELF kernels.
+`nth` is an open-source, UEFI bootloader and the reference implementation for the `nth` boot protocol. It provides a built-in graphical boot manager and supports booting 64-bit ELF kernels.
 
 ### Screenshots
 ![nth Boot Menu](assets/homepage.png?raw=true "nth Boot Menu")
