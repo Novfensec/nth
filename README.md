@@ -4,10 +4,6 @@
 
 `nth` is an open-source, universal UEFI bootloader and the reference implementation for the `nth` boot protocol. It provides a built-in graphical boot manager and supports booting 64-bit ELF kernels.
 
-### Community and Support
-
-Feel free to open an issue or pull request on our repository for support, or join our community discussions [insert link to Discord/Matrix/etc here].
-
 ### Screenshots
 ![nth Boot Menu](assets/homepage.png?raw=true "nth Boot Menu")
 
@@ -21,7 +17,7 @@ Feel free to open an issue or pull request on our repository for support, or joi
 * FAT32
 
 ### Minimum system requirements
-* An x86-64 system or virtual machine with UEFI firmware (e.g., QEMU with OVMF).
+* An x86-64 system, virtual machine with UEFI firmware (e.g., QEMU with OVMF, Virtualbox)
 
 ## Setup
 
