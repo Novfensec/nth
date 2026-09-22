@@ -3,22 +3,61 @@
 
 #include <stdint.h>
 
-typedef struct
+#ifdef __cplusplus
+extern "C"
 {
-    uint64_t BaseAddress;
-    uint64_t BufferSize;
-    uint32_t Width;
-    uint32_t Height;
-    uint32_t PixelsPerScanLine;
-} NthFramebuffer;
+#endif
 
-typedef struct
-{
-    NthFramebuffer *Framebuffer;
-    void *MemoryMap;
-    uint64_t MapSize;
-    uint64_t DescriptorSize;
-    void *Rsdp;
-} NthBootInfo;
+    typedef struct
+    {
+        uint64_t BaseAddress;
+        uint64_t BufferSize;
+        uint32_t Width;
+        uint32_t Height;
+        uint32_t PixelsPerScanLine;
+    } NthFramebuffer;
+
+    typedef enum
+    {
+        EfiReservedMemoryType,
+        EfiLoaderCode,
+        EfiLoaderData,
+        EfiBootServicesCode,
+        EfiBootServicesData,
+        EfiRuntimeServicesCode,
+        EfiRuntimeServicesData,
+        EfiConventionalMemory,
+        EfiUnusableMemory,
+        EfiACPIReclaimMemory,
+        EfiACPIMemoryNVS,
+        EfiMemoryMappedIO,
+        EfiMemoryMappedIOPortSpace,
+        EfiPalCode,
+        EfiPersistentMemory,
+        EfiMaxMemoryType
+    } NthMemoryType;
+
+    typedef struct
+    {
+        uint32_t Type;
+        uint32_t Pad;
+        uint64_t PhysicalStart;
+        uint64_t VirtualStart;
+        uint64_t NumberOfPages;
+        uint64_t Attribute;
+    } __attribute__((packed)) NthMemoryDescriptor;
+
+    typedef struct
+    {
+        NthFramebuffer *Framebuffer;
+        void *MemoryMap;
+        uint64_t MapSize;
+        uint64_t DescriptorSize;
+        void *Rsdp;
+    } NthBootInfo;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
