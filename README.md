@@ -1,6 +1,27 @@
 # nth
 
-nth is an open-source bootloader.
+### What is nth?
+
+`nth` is an open-source, universal UEFI bootloader and the reference implementation for the `nth` boot protocol. It provides a built-in graphical boot manager and supports booting 64-bit ELF kernels.
+
+### Community and Support
+
+Feel free to open an issue or pull request on our repository for support, or join our community discussions [insert link to Discord/Matrix/etc here].
+
+### Screenshots
+![nth Boot Menu](assets/homepage.png?raw=true "nth Boot Menu")
+
+### Supported architectures
+* x86-64 (UEFI)
+
+### Supported boot protocols
+* [nth protocol](#the-handoff-protocol)
+
+### Supported filesystems
+* FAT32
+
+### Minimum system requirements
+* An x86-64 system or virtual machine with UEFI firmware (e.g., QEMU with OVMF).
 
 ## Setup
 
@@ -60,17 +81,17 @@ qemu-system-x86_64 \
 > [!TIP]
 > If you need to access the OVMF UEFI firmware settings (the built-in UEFI Boot Manager), press the `ESC` key rapidly as soon as the QEMU window appears.
 
-## Custom Kernels / Boot Protocol
+## Kernels / Boot Protocol
 
-`nth` can boot any custom kernel that adheres to its boot protocol. The kernel must be compiled as a **64-bit ELF executable** (`x86_64-elf`).
+`nth` can boot any kernel that adheres to its universal boot protocol. The kernel must be compiled as a **64-bit ELF executable** (`x86_64-elf`).
 
 ### Boot Manager Tricks (`nth.cfg`)
 
-The bootloader features a built-in graphical boot manager. It populates its menu by parsing an `nth.cfg` file located in the root of the EFI partition. You can define up to 9 custom kernel entries in this file, using the simple `Name=Path` format:
+The bootloader features a built-in graphical boot manager. It populates its menu by parsing an `nth.cfg` file located in the root of the EFI partition. You can define up to 9 kernel entries in this file, using the simple `Name=Path` format:
 
 ```ini
 NTH OS=\kernel.elf
-My Custom Kernel=\vmlinuz
+My Kernel=\vmlinuz
 Memory Tester=\memtest.elf
 ```
 

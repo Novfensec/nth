@@ -12,8 +12,8 @@ echo "Preparing ISO staging environment..."
 rm -rf iso_root
 mkdir -p iso_root
 
-dd if=/dev/zero of=iso_root/efi.img bs=1M count=32 status=none
-mkfs.vfat -F 16 iso_root/efi.img > /dev/null
+dd if=/dev/zero of=iso_root/efi.img bs=1M count=64 status=none
+mkfs.vfat -F 32 iso_root/efi.img > /dev/null
 
 mmd -i iso_root/efi.img ::/EFI
 mmd -i iso_root/efi.img ::/EFI/BOOT
