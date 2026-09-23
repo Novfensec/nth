@@ -108,9 +108,9 @@ To boot the ISO in VirtualBox, you must enable EFI.
 
 </details>
 
-## Kernels / Boot Protocol
+## Custom Kernels / Boot Protocol
 
-`nth` can boot any kernel that adheres to its universal boot protocol. The kernel must be compiled as a **64-bit ELF executable** (`x86_64-elf`).
+`nth` can boot any kernel that adheres to its nth boot protocol. The kernel must be compiled as a **64-bit ELF executable** (`x86_64-elf`).
 
 > [!TIP]
 > If you want a quick start, check out the [nth-c-template](https://github.com/Novfensec/nth-c-template) repository to instantly bootstrap your C kernel development.
