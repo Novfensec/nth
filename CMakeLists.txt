@@ -8,7 +8,7 @@ set(EFI_CRT0 "/usr/lib/crt0-efi-x86_64.o")
 set(EFI_LDS "/usr/lib/elf_x86_64_efi.lds")
 
 set(CMAKE_C_FLAGS "-fpic -ffreestanding -fno-stack-protector -fno-strict-aliasing -fshort-wchar -mno-red-zone -Wall")
-add_library(bootloader SHARED src/boot.c src/file.c src/elf.c src/gop.c src/memory.c src/menu.c src/config.c)
+add_library(bootloader SHARED src/boot.c src/file.c src/elf.c src/gop.c src/memory.c src/menu.c src/config.c src/paging.c)
 target_include_directories(bootloader PRIVATE ${GNU_EFI_INCLUDE} ${GNU_EFI_ARCH_INCLUDE})
 
 target_link_options(bootloader PRIVATE 
@@ -27,7 +27,7 @@ set(KERNEL_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/kernel.c")
 set(KERNEL_LINKER "${CMAKE_CURRENT_SOURCE_DIR}/src/linker.ld")
 set(KERNEL_ELF "${CMAKE_CURRENT_SOURCE_DIR}/esp/kernel.elf")
 
-set(KERNEL_C_FLAGS -ffreestanding -mno-red-zone -Wall -Wextra -O2)
+set(KERNEL_C_FLAGS -ffreestanding -mcmodel=kernel -mno-red-zone -Wall -Wextra -O2)
 
 add_custom_command(
     OUTPUT ${KERNEL_ELF}

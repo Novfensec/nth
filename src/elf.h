@@ -37,6 +37,6 @@ typedef struct
 } Elf64_Phdr;
 
 BOOLEAN ValidateELF(VOID *FileBuffer);
-UINT64 LoadELF(VOID *FileBuffer);
+UINT64 LoadELF(VOID *FileBuffer, UINT64 *PML4);
 
 #endif

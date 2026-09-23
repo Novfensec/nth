@@ -12,7 +12,7 @@ void draw_pixel(NthFramebuffer *fb, uint32_t x, uint32_t y, uint32_t color)
 
 void draw_char(NthFramebuffer *fb, char c, uint32_t x, uint32_t y, uint32_t scale, uint32_t color)
 {
-    if (c < 32 || c > 127)
+    if ((unsigned char)c < 32 || (unsigned char)c > 127)
         return;
 
     uint8_t *glyph = (uint8_t *)font8x8[(int)c - 32];

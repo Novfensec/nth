@@ -30,6 +30,8 @@ xorriso -as mkisofs \
     iso_root > /dev/null 2>&1
 
 echo "Booting ISO in QEMU..."
+cp /usr/share/OVMF/OVMF_VARS_4M.fd .
+
 qemu-system-x86_64 \
     -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
     -drive if=pflash,format=raw,file=OVMF_VARS_4M.fd \

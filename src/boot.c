@@ -7,6 +7,7 @@
 #include "nth_protocol.h"
 #include "menu.h"
 #include "config.h"
+#include "paging.h"
 
 EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 {
@@ -48,7 +49,15 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
     UINTN KernelSize = 0;
     LoadFile(ImageHandle, SelectedKernel, &KernelBuffer, &KernelSize);
 
-    UINT64 EntryPoint = LoadELF(KernelBuffer);
+    EFI_MEMORY_DESCRIPTOR *PagingMemoryMap = NULL;
+    UINTN PagingMapSize, PagingMapKey, PagingDescriptorSize;
+    ReadMemoryMap(&PagingMemoryMap, &PagingMapSize, &PagingMapKey, &PagingDescriptorSize);
+
+    UINT64 *PML4 = SetupPaging(PagingMemoryMap, PagingMapSize, PagingDescriptorSize);
+
+    uefi_call_wrapper(BS->FreePool, 1, PagingMemoryMap);
+
+    UINT64 EntryPoint = LoadELF(KernelBuffer, PML4);
     typedef void (*KernelStart)(NthBootInfo *);
     KernelStart kernel_main = (KernelStart)EntryPoint;
 
@@ -88,6 +97,8 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
     boot_info.MapSize = MapSize;
     boot_info.DescriptorSize = DescriptorSize;
     boot_info.Rsdp = rsdp;
+
+    SwitchPageTable(PML4);
 
     kernel_main(&boot_info);
 
