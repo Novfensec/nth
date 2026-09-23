@@ -75,8 +75,8 @@ qemu-system-x86_64 \
     -m 256M
 ```
 
-> [!TIP]
-> If you need to access the OVMF UEFI firmware settings (the built-in UEFI Boot Manager), press the `ESC` key rapidly as soon as the QEMU window appears.
+- If you need to access the OVMF UEFI firmware settings (the built-in UEFI Boot Manager), press the `ESC` key rapidly as soon as the QEMU window appears.
+
 </details>
 
 <details>
