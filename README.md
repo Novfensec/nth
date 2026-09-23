@@ -79,6 +79,9 @@ qemu-system-x86_64 \
 
 `nth` can boot any kernel that adheres to its universal boot protocol. The kernel must be compiled as a **64-bit ELF executable** (`x86_64-elf`).
 
+> [!TIP]
+> If you want a quick start, check out the [nth-c-template](https://github.com/Novfensec/nth-c-template) repository to instantly bootstrap your C kernel development.
+
 ### Boot Manager Tricks (`nth.cfg`)
 
 The bootloader features a built-in graphical boot manager. It populates its menu by parsing an `nth.cfg` file located in the root of the EFI partition. You can define up to 9 kernel entries in this file, using the simple `Name=Path` format:
