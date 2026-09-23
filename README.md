@@ -62,6 +62,9 @@ Alternatively, if you only want to build the files and run QEMU directly via a l
 
 ## Booting Manually
 
+<details>
+<summary><b>QEMU Setup</b></summary>
+
 To manually launch the generated ISO using QEMU, you need the OVMF UEFI firmware files. Run the following command from the root directory:
 
 ```bash
@@ -74,6 +77,36 @@ qemu-system-x86_64 \
 
 > [!TIP]
 > If you need to access the OVMF UEFI firmware settings (the built-in UEFI Boot Manager), press the `ESC` key rapidly as soon as the QEMU window appears.
+</details>
+
+<details>
+<summary><b>VirtualBox Setup</b></summary>
+
+To boot the ISO in VirtualBox, you must enable EFI.
+1. Create a new virtual machine and select the generated ISO (`nth_os.iso`).
+    - Select  the `iso` image file you generated in the `mk_iso.sh` script.
+    - Set OS to `Other`
+    - Set OS Version to `Other/Unknow (64-bit)`
+
+    ![VirtualBox Machine](assets/vmachine.png?raw=true "VirtualBox Machine")
+
+2. In the VM settings, go to the **System** tab.
+    - Increase base memory to `1024 MB`.
+    - Enable `UEFI`.
+    - Enable `I/O APIC`.
+
+    ![VirtualBox Settings 2](assets/vboxset2.png?raw=true "VirtualBox Settings 2")
+
+
+3. In the VM settings, go to the **Display** tab.
+    - Increase Video Memory to the maximum.
+
+    ![VirtualBox Settings 1](assets/vboxset1.png?raw=true "VirtualBox Settings 1")
+
+4. Boot up the VM.
+
+
+</details>
 
 ## Kernels / Boot Protocol
 
