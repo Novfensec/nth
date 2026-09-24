@@ -26,6 +26,7 @@ xorriso -as mkisofs \
     -R -f \
     -e efi.img \
     -no-emul-boot \
+    -isohybrid-gpt-basdat \
     -o nth_os.iso \
     iso_root > /dev/null 2>&1
 
