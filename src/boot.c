@@ -143,9 +143,11 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
             if (!EFI_ERROR(Status))
             {
                 NewLoadedImage->LoadOptions = SelectedEntry->Options;
-                NewLoadedImage->LoadOptionsSize = StrLen(SelectedEntry->Options) * sizeof(CHAR16);
+                NewLoadedImage->LoadOptionsSize = (StrLen(SelectedEntry->Options) + 1) * sizeof(CHAR16);
             }
         }
+
+        uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut);
 
         Status = uefi_call_wrapper(BS->StartImage, 3, NewImageHandle, NULL, NULL);
         if (EFI_ERROR(Status))
