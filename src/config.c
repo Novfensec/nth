@@ -37,11 +37,23 @@ UINTN ParseConfig(VOID *FileBuffer, UINTN FileSize, BootEntry *Entries, UINTN Ma
 
         CHAR8 PathBuf[64] = {0};
         UINTN p = 0;
-        while (i < FileSize && Buffer[i] != '\r' && Buffer[i] != '\n' && p < 63)
+        while (i < FileSize && Buffer[i] != '\r' && Buffer[i] != '\n' && Buffer[i] != '|' && p < 63)
         {
             PathBuf[p++] = Buffer[i++];
         }
         PathBuf[p] = '\0';
+        
+        CHAR8 OptionsBuf[256] = {0};
+        UINTN o = 0;
+        if (i < FileSize && Buffer[i] == '|')
+        {
+            i++;
+            while (i < FileSize && Buffer[i] != '\r' && Buffer[i] != '\n' && o < 255)
+            {
+                OptionsBuf[o++] = Buffer[i++];
+            }
+        }
+        OptionsBuf[o] = '\0';
 
         while (p > 0 && (PathBuf[p - 1] == ' ' || PathBuf[p - 1] == '\r' || PathBuf[p - 1] == '\n'))
         {
@@ -52,6 +64,13 @@ UINTN ParseConfig(VOID *FileBuffer, UINTN FileSize, BootEntry *Entries, UINTN Ma
         {
             uefi_call_wrapper(BS->AllocatePool, 3, EfiLoaderData, 128, (VOID **)&Entries[EntryCount].Name);
             uefi_call_wrapper(BS->AllocatePool, 3, EfiLoaderData, 128, (VOID **)&Entries[EntryCount].KernelPath);
+            
+            if (o > 0) {
+                uefi_call_wrapper(BS->AllocatePool, 3, EfiLoaderData, 512, (VOID **)&Entries[EntryCount].Options);
+                AsciiToUnicode(OptionsBuf, Entries[EntryCount].Options, 256);
+            } else {
+                Entries[EntryCount].Options = NULL;
+            }
 
             AsciiToUnicode(NameBuf, Entries[EntryCount].Name, 64);
             AsciiToUnicode(PathBuf, Entries[EntryCount].KernelPath, 64);
