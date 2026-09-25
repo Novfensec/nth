@@ -108,7 +108,7 @@ BootEntry *ShowGraphicalMenu(EFI_SYSTEM_TABLE *SystemTable, Framebuffer *fb, Boo
             if (SelectedIndex < EntryCount - 1)
                 SelectedIndex++;
         }
-        else if (Key.UnicodeChar == L'\r' || Key.UnicodeChar == L'\n')
+        else if (Key.UnicodeChar == L'\r' || Key.UnicodeChar == L'\n' || Key.UnicodeChar == L' ' || Key.ScanCode == 0x0B)
         {
             return &Entries[SelectedIndex];
         }

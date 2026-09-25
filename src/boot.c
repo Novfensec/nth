@@ -42,6 +42,9 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
 
     BootEntry *SelectedEntry = ShowGraphicalMenu(SystemTable, &fb, entries, entry_count);
 
+    uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut);
+    Print(L"Attempting to boot: %s\n", SelectedEntry->Name);
+
     if (SelectedEntry == NULL || SelectedEntry->KernelPath == NULL)
     {
         uefi_call_wrapper(RT->ResetSystem, 4, EfiResetCold, EFI_SUCCESS, 0, NULL);
@@ -120,21 +123,33 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
     }
     else if (KernelSize >= 2 && magic[0] == 'M' && magic[1] == 'Z')
     {
+        Print(L"Detected PE/COFF kernel (Linux EFI stub). Preparing to load...\n");
+        uefi_call_wrapper(BS->Stall, 1, 1000000);
+
         EFI_HANDLE NewImageHandle;
         
         EFI_LOADED_IMAGE *ParentLoadedImage = NULL;
         EFI_GUID lipGuid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
         uefi_call_wrapper(BS->HandleProtocol, 3, ImageHandle, &lipGuid, (VOID **)&ParentLoadedImage);
         
+        Print(L"Creating DevicePath...\n");
+        uefi_call_wrapper(BS->Stall, 1, 1000000);
+        
         EFI_DEVICE_PATH *KernelDevicePath = FileDevicePath(ParentLoadedImage->DeviceHandle, SelectedEntry->KernelPath);
 
-        Status = uefi_call_wrapper(BS->LoadImage, 6, FALSE, ImageHandle, KernelDevicePath, KernelBuffer, KernelSize, &NewImageHandle);
+        Print(L"Calling BS->LoadImage from DevicePath...\n");
+        uefi_call_wrapper(BS->Stall, 1, 1000000);
+
+        Status = uefi_call_wrapper(BS->LoadImage, 6, FALSE, ImageHandle, KernelDevicePath, NULL, 0, &NewImageHandle);
         if (EFI_ERROR(Status))
         {
             Print(L"Failed to LoadImage: %r\n", Status);
             uefi_call_wrapper(BS->Stall, 1, 3000000);
             return Status;
         }
+
+        Print(L"LoadImage successful. Setting options...\n");
+        uefi_call_wrapper(BS->Stall, 1, 1000000);
 
         if (SelectedEntry->Options != NULL)
         {
@@ -147,6 +162,9 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
             }
         }
 
+        Print(L"Calling StartImage...\n");
+        uefi_call_wrapper(BS->Stall, 1, 1000000);
+        
         uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut);
 
         Status = uefi_call_wrapper(BS->StartImage, 3, NewImageHandle, NULL, NULL);
