@@ -52,7 +52,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
     EFI_STATUS Status = LoadFile(ImageHandle, SelectedEntry->KernelPath, &KernelBuffer, &KernelSize);
     if (EFI_ERROR(Status))
     {
-        Print(L"Failed to load kernel.\n");
+        Print(L"Failed to load kernel: %s\n", SelectedEntry->KernelPath);
         uefi_call_wrapper(BS->Stall, 1, 3000000);
         return Status;
     }

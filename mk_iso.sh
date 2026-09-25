@@ -18,8 +18,7 @@ mkfs.vfat -F 32 iso_root/efi.img > /dev/null
 mmd -i iso_root/efi.img ::/EFI
 mmd -i iso_root/efi.img ::/EFI/BOOT
 mcopy -i iso_root/efi.img build/BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI
-mcopy -i iso_root/efi.img esp/nth.cfg ::/nth.cfg
-mcopy -i iso_root/efi.img esp/kernel.elf ::/kernel.elf
+mcopy -s -i iso_root/efi.img esp/* ::/
 
 echo "Generating standard UEFI ISO..."
 xorriso -as mkisofs \
