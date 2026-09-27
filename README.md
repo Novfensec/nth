@@ -9,7 +9,7 @@
 * x86-64 (UEFI)
 
 ### Supported boot protocols
-* [nth protocol](#the-handoff-protocol)
+* [nth protocol](#the-nth-protocol)
 
 ### Supported filesystems
 * FAT32
@@ -42,20 +42,22 @@ The project requires an `x86_64-elf` cross-compiler and the `gnu-efi` library. T
 
 ## Build Instructions
 
-To build the UEFI bootloader (`BOOTX64.EFI`) and kernel (`kernel.elf`), and then pack them into a bootable ISO image (`nth_os.iso`):
+To see the bootloader in action, you can build it along with an example kernel provided in the `example_kernel` directory. The included script will compile both the bootloader and the test kernel, pack them into a bootable ISO image (`nth_os.iso`), and automatically launch QEMU:
 
 ```bash
+cd example_kernel
 ./mk_iso.sh
 ```
 
 This script will automatically:
-1. Configure and compile the project via CMake in the `build/` directory.
-2. Create an EFI system partition image (`efi.img`).
-3. Copy the compiled EFI bootloader and kernel into the partition.
-4. Generate the final `nth_os.iso` using `xorriso`.
-5. Launch the ISO in QEMU using OVMF UEFI firmware.
+- Compile the example kernel into an ELF executable (`kernel.elf`).
+- Configure and compile the bootloader (`BOOTX64.EFI`) via CMake.
+- Create an EFI system partition image (`efi.img`).
+- Copy the compiled EFI bootloader and kernel into the partition.
+- Generate the final `nth_os.iso` using `xorriso`.
+- Launch the ISO in QEMU using OVMF UEFI firmware.
 
-Alternatively, if you only want to build the files and run QEMU directly via a local FAT directory (without creating an ISO), you can run:
+Alternatively, if you only want to build the bootloader and run QEMU directly via a local FAT directory (without creating an ISO), you can run the following from the root directory (ensure your `esp/` directory has a kernel!):
 ```bash
 ./build_and_run.sh
 ```
@@ -108,24 +110,37 @@ To boot the ISO in VirtualBox, you must enable EFI.
 
 </details>
 
-## Custom Kernels / Boot Protocol
+## Custom Kernels & OS Integration
 
-`nth` can boot any kernel that adheres to its nth boot protocol. The kernel must be compiled as a **64-bit ELF executable** (`x86_64-elf`).
+`nth` can boot any custom OS kernel that adheres to the **nth boot protocol** (via a 64-bit ELF executable) or standard **Linux EFI stub** kernels (via PE/COFF).
 
 > [!TIP]
 > If you want a quick start, check out the [nth-c-template](https://github.com/Novfensec/nth-c-template) repository to instantly bootstrap your C kernel development.
 
-### Boot Manager Tricks (`nth.cfg`)
+### Boot Manager Configuration (`nth.cfg`)
 
 The bootloader features a built-in graphical boot manager. It populates its menu by parsing an `nth.cfg` file located in the root of the EFI partition. You can define up to 9 kernel entries in this file, using the simple `Name=Path` format:
 
 ```ini
 NTH OS=\kernel.elf
-My Kernel=\vmlinuz
+Alpine Linux=\vmlinuz-virt|vmlinuz-virt initrd=\initramfs-virt modules=loop,squashfs,sd-mod,usb-storage console=tty0 quiet
 Memory Tester=\memtest.elf
 ```
 
 If `nth.cfg` is missing or fails to load, the boot manager will default to attempting to load `\kernel.elf`. A "Reboot System" option is always appended to the end of the menu automatically.
+
+### Linux Boot Support
+
+Modern Linux kernels are typically compiled with the EFI stub (acting as PE/COFF UEFI applications). `nth` seamlessly detects these kernels. 
+
+When writing an entry for Linux in `nth.cfg`, use the pipe character (`|`) to separate the kernel path from the command line arguments. The bootloader will:
+1. Load the kernel using the UEFI `LoadImage` service.
+2. Pass the everything after the `|` to the kernel as `LoadOptions` (which the Linux EFI stub parses as its command line, e.g., to load the `initrd`).
+3. Boot the kernel natively using `StartImage`.
+
+```ini
+Alpine Linux=\vmlinuz-virt|vmlinuz-virt initrd=\initramfs-virt modules=loop,squashfs,sd-mod,usb-storage console=tty0 quiet
+```
 
 ### Linking Your Kernel (`linker.ld`)
 
@@ -133,7 +148,7 @@ When writing your own kernel, your linker script (`linker.ld`) can specify any v
 
 The bootloader dynamically reads the `e_entry` field from the ELF header to determine the entry point. This means you can name your entry function whatever you like (`_start`, `kernel_main`, etc.) as long as it is correctly specified via the `ENTRY()` directive in your linker script.
 
-### The Handoff Protocol
+### The Nth Protocol
 
 When the bootloader transfers control to your kernel's entry point, it passes a pointer to an `NthBootInfo` structure as the first argument (System V ABI, passed in the `%rdi` register).
 
@@ -173,5 +188,12 @@ void kernel_main(NthBootInfo *boot_info) {
 }
 ```
 
-> [!Note]
-> By the time your kernel executes, `nth` will have successfully exited UEFI Boot Services and initialized the linear GOP framebuffer. You are in 64-bit long mode without a GDT or IDT set up.
+### Memory Mapping & Higher Half Support
+
+Before jumping to your ELF kernel, `nth` automatically creates a new page table (PML4) and exits UEFI Boot Services. It sets up a highly convenient environment out-of-the-box:
+
+1. **Identity Mapping**: All available physical memory (up to at least 4GB, or the highest physical address reported by UEFI) is identity mapped.
+2. **Higher Half Direct Map (HHDM)**: All physical memory is also mapped to the higher half of the address space starting at `0xFFFF800000000000`.
+3. **Huge Pages**: The mapping uses 2MB huge pages (`PAGE_HUGE`) to minimize TLB usage and page table overhead.
+
+You are placed in **64-bit long mode** with the `CR3` register already pointing to this page table. You do not have a GDT or IDT configured yet. This allows you to easily design a higher-half kernel without writing a messy trampoline or initial assembly boot routine.
