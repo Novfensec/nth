@@ -3,7 +3,6 @@ set -e
 
 cd "$(dirname "$0")"
 
-echo "Building kernel..."
 bash build.sh
 
 echo "Building bootloader..."
@@ -15,17 +14,19 @@ make
 cd ../example_kernel
 
 echo "Preparing ISO staging environment..."
+mkdir -p ../esp/EFI/BOOT
+cp ../build/BOOTX64.EFI ../esp/EFI/BOOT/BOOTX64.EFI
+
 rm -rf iso_root
 mkdir -p iso_root
+cp -r ../esp/* iso_root/
 
-dd if=/dev/zero of=iso_root/efi.img bs=1M count=32 status=none
-mkfs.vfat -F 32 iso_root/efi.img > /dev/null
+dd if=/dev/zero of=efi.img bs=1M count=64 status=none
+mkfs.vfat -F 32 efi.img > /dev/null
 
-mmd -i iso_root/efi.img ::/EFI
-mmd -i iso_root/efi.img ::/EFI/BOOT
+mcopy -s -i efi.img iso_root/* ::/
 
-mcopy -o -s -i iso_root/efi.img ../esp/* ::/
-mcopy -o -i iso_root/efi.img ../build/BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI
+mv efi.img iso_root/efi.img
 
 echo "Generating standard UEFI ISO..."
 xorriso -as mkisofs \
@@ -39,8 +40,21 @@ xorriso -as mkisofs \
 echo "Booting ISO in QEMU..."
 cp /usr/share/OVMF/OVMF_VARS_4M.fd . 2>/dev/null || true
 
+OVMF_CODE=""
+for p in /usr/share/OVMF/OVMF_CODE_4M.fd /usr/share/OVMF/OVMF_CODE.fd /usr/share/edk2-ovmf/x64/OVMF_CODE.fd; do
+    if [ -f "$p" ]; then
+        OVMF_CODE="$p"
+        break
+    fi
+done
+
+if [ -z "$OVMF_CODE" ]; then
+    echo "Error: OVMF_CODE not found. Please install ovmf."
+    exit 1
+fi
+
 qemu-system-x86_64 \
-    -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
+    -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
     -drive if=pflash,format=raw,file=OVMF_VARS_4M.fd \
     -cdrom nth_os.iso \
     -m 256M
