@@ -22,18 +22,3 @@ add_custom_command(TARGET bootloader POST_BUILD
             -j .rela -j .reloc --target=efi-app-x86_64 
             $<TARGET_FILE:bootloader> ${CMAKE_BINARY_DIR}/BOOTX64.EFI
 )
-
-set(KERNEL_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/kernel.c")
-set(KERNEL_LINKER "${CMAKE_CURRENT_SOURCE_DIR}/src/linker.ld")
-set(KERNEL_ELF "${CMAKE_CURRENT_SOURCE_DIR}/esp/kernel.elf")
-
-set(KERNEL_C_FLAGS -ffreestanding -mcmodel=kernel -mno-red-zone -Wall -Wextra -O2)
-
-add_custom_command(
-    OUTPUT ${KERNEL_ELF}
-    COMMAND x86_64-elf-gcc ${KERNEL_C_FLAGS} -c ${KERNEL_SRC} -o ${CMAKE_CURRENT_BINARY_DIR}/kernel.o
-    COMMAND x86_64-elf-ld -T ${KERNEL_LINKER} ${CMAKE_CURRENT_BINARY_DIR}/kernel.o -o ${KERNEL_ELF}
-    DEPENDS ${KERNEL_SRC} ${KERNEL_LINKER}
-)
-
-add_custom_target(kernel ALL DEPENDS ${KERNEL_ELF})

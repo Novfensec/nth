@@ -44,7 +44,7 @@ static void DrawString(Framebuffer *fb, const CHAR16 *str, UINT32 x, UINT32 y, U
     }
 }
 
-CHAR16 *ShowGraphicalMenu(EFI_SYSTEM_TABLE *SystemTable, Framebuffer *fb, BootEntry *Entries, UINTN EntryCount)
+BootEntry *ShowGraphicalMenu(EFI_SYSTEM_TABLE *SystemTable, Framebuffer *fb, BootEntry *Entries, UINTN EntryCount)
 {
     UINTN SelectedIndex = 0;
     EFI_INPUT_KEY Key;
@@ -108,9 +108,9 @@ CHAR16 *ShowGraphicalMenu(EFI_SYSTEM_TABLE *SystemTable, Framebuffer *fb, BootEn
             if (SelectedIndex < EntryCount - 1)
                 SelectedIndex++;
         }
-        else if (Key.UnicodeChar == L'\r' || Key.UnicodeChar == L'\n')
+        else if (Key.UnicodeChar == L'\r' || Key.UnicodeChar == L'\n' || Key.UnicodeChar == L' ' || Key.ScanCode == 0x0B)
         {
-            return Entries[SelectedIndex].KernelPath;
+            return &Entries[SelectedIndex];
         }
     }
 }

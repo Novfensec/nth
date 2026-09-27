@@ -45,6 +45,36 @@ void draw_string(NthFramebuffer *fb, const char *str, uint32_t x, uint32_t y, ui
     }
 }
 
+// Simple integer to string converter for our kernel
+void itoa(uint64_t value, char *str)
+{
+    if (value == 0)
+    {
+        str[0] = '0';
+        str[1] = '\0';
+        return;
+    }
+
+    int i = 0;
+    while (value != 0)
+    {
+        str[i++] = (value % 10) + '0';
+        value /= 10;
+    }
+    str[i] = '\0';
+
+    int start = 0;
+    int end = i - 1;
+    while (start < end)
+    {
+        char temp = str[start];
+        str[start] = str[end];
+        str[end] = temp;
+        start++;
+        end--;
+    }
+}
+
 void kernel_main(NthBootInfo *boot_info)
 {
     NthFramebuffer *fb = boot_info->Framebuffer;
@@ -74,6 +104,33 @@ void kernel_main(NthBootInfo *boot_info)
     uint32_t start_y = (fb->Height - pixel_height) / 2;
 
     draw_string(fb, message, start_x, start_y, scale, 0x00FFFFFF);
+
+    // We will calculate total usable RAM in Megabytes.
+    uint64_t total_usable_pages = 0;
+
+    uint64_t num_entries = boot_info->MapSize / boot_info->DescriptorSize;
+
+    for (uint64_t i = 0; i < num_entries; i++)
+    {
+        void *raw_pointer = (uint8_t *)boot_info->MemoryMap + (i * boot_info->DescriptorSize);
+
+        NthMemoryDescriptor *desc = (NthMemoryDescriptor *)raw_pointer;
+
+        if (desc->Type == NthEfiConventionalMemory)
+        {
+            total_usable_pages += desc->NumberOfPages;
+        }
+    }
+
+    // A UEFI page is 4096 bytes (4KB).
+    // Total Bytes = pages * 4096. Total MB = Total Bytes / (1024 * 1024)
+    uint64_t usable_ram_mb = (total_usable_pages * 4096) / (1024 * 1024);
+
+    char ram_str[32];
+    itoa(usable_ram_mb, ram_str);
+
+    draw_string(fb, "Usable RAM (MB): ", start_x, start_y + 40, 2, 0x0000FF00);
+    draw_string(fb, ram_str, start_x + (17 * 16), start_y + 40, 2, 0x0000FF00);
 
     while (1)
     {

@@ -1,15 +1,33 @@
 # nth
 
+[![Support Development](https://img.shields.io/github/sponsors/Novfensec?style=for-the-badge&label=Support%20Development&logo=github&color=000000)](https://github.com/sponsors/Novfensec)
+[![Support via PayPal](https://img.shields.io/badge/Support-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://www.paypal.me/KARTAVYASHUKLA)
+[![Support via Wise](https://img.shields.io/badge/Support-Wise-9FE870?style=for-the-badge&logo=wise&labelColor=163300)](https://wise.com/pay/business/kartavyashukla)
+
 `nth` is an open-source, UEFI bootloader and the reference implementation for the `nth` boot protocol. It provides a built-in graphical boot manager and supports booting 64-bit ELF kernels.
 
 ### Screenshots
 ![nth Boot Menu](assets/homepage.png?raw=true "nth Boot Menu")
 
+## Table of Contents
+- [Setup](#setup)
+  - [Prerequisites (Linux / WSL)](#prerequisites-linux--wsl)
+- [Build Instructions](#build-instructions)
+- [Booting Manually](#booting-manually)
+- [Custom Kernels & OS Integration](#custom-kernels--os-integration)
+  - [Boot Manager Configuration (`nth.cfg`)](#boot-manager-configuration-nthcfg)
+  - [Linux Boot Support](#linux-boot-support)
+  - [Linking Your Kernel (`linker.ld`)](#linking-your-kernel-linkerld)
+  - [The Nth Protocol](#the-nth-protocol)
+  - [Parsing the Memory Map](#parsing-the-memory-map)
+  - [Memory Mapping & Higher Half Support](#memory-mapping--higher-half-support)
+
+
 ### Supported architectures
 * x86-64 (UEFI)
 
 ### Supported boot protocols
-* [nth protocol](#the-handoff-protocol)
+* [nth protocol](#the-nth-protocol)
 
 ### Supported filesystems
 * FAT32
@@ -42,20 +60,22 @@ The project requires an `x86_64-elf` cross-compiler and the `gnu-efi` library. T
 
 ## Build Instructions
 
-To build the UEFI bootloader (`BOOTX64.EFI`) and kernel (`kernel.elf`), and then pack them into a bootable ISO image (`nth_os.iso`):
+To see the bootloader in action, you can build it along with an example kernel provided in the `example_kernel` directory. The included script will compile both the bootloader and the test kernel, pack them into a bootable ISO image (`nth_os.iso`), and automatically launch QEMU:
 
 ```bash
+cd example_kernel
 ./mk_iso.sh
 ```
 
 This script will automatically:
-1. Configure and compile the project via CMake in the `build/` directory.
-2. Create an EFI system partition image (`efi.img`).
-3. Copy the compiled EFI bootloader and kernel into the partition.
-4. Generate the final `nth_os.iso` using `xorriso`.
-5. Launch the ISO in QEMU using OVMF UEFI firmware.
+- Compile the example kernel into an ELF executable (`kernel.elf`).
+- Configure and compile the bootloader (`BOOTX64.EFI`) via CMake.
+- Create an EFI system partition image (`efi.img`).
+- Copy the compiled EFI bootloader and kernel into the partition.
+- Generate the final `nth_os.iso` using `xorriso`.
+- Launch the ISO in QEMU using OVMF UEFI firmware.
 
-Alternatively, if you only want to build the files and run QEMU directly via a local FAT directory (without creating an ISO), you can run:
+Alternatively, if you only want to build the bootloader and run QEMU directly via a local FAT directory (without creating an ISO), you can run the following from the root directory (ensure your `esp/` directory has a kernel!):
 ```bash
 ./build_and_run.sh
 ```
@@ -108,55 +128,91 @@ To boot the ISO in VirtualBox, you must enable EFI.
 
 </details>
 
-## Custom Kernels / Boot Protocol
+## Custom Kernels & OS Integration
 
-`nth` can boot any kernel that adheres to its nth boot protocol. The kernel must be compiled as a **64-bit ELF executable** (`x86_64-elf`).
+`nth` can boot any custom OS kernel that adheres to the **nth boot protocol** (via a 64-bit ELF executable) or standard **Linux EFI stub** kernels (via PE/COFF).
 
 > [!TIP]
 > If you want a quick start, check out the [nth-c-template](https://github.com/Novfensec/nth-c-template) repository to instantly bootstrap your C kernel development.
 
-### Boot Manager Tricks (`nth.cfg`)
+### Boot Manager Configuration (`nth.cfg`)
 
 The bootloader features a built-in graphical boot manager. It populates its menu by parsing an `nth.cfg` file located in the root of the EFI partition. You can define up to 9 kernel entries in this file, using the simple `Name=Path` format:
 
 ```ini
 NTH OS=\kernel.elf
-My Kernel=\vmlinuz
+Alpine Linux=\vmlinuz-virt|vmlinuz-virt initrd=\initramfs-virt modules=loop,squashfs,sd-mod,usb-storage console=tty0 quiet
 Memory Tester=\memtest.elf
 ```
 
 If `nth.cfg` is missing or fails to load, the boot manager will default to attempting to load `\kernel.elf`. A "Reboot System" option is always appended to the end of the menu automatically.
 
+### Linux Boot Support
+
+Modern Linux kernels are typically compiled with the EFI stub (acting as PE/COFF UEFI applications). `nth` seamlessly detects these kernels. 
+
+When writing an entry for Linux in `nth.cfg`, use the pipe character (`|`) to separate the kernel path from the command line arguments. The bootloader will:
+1. Load the kernel using the UEFI `LoadImage` service.
+2. Pass the everything after the `|` to the kernel as `LoadOptions` (which the Linux EFI stub parses as its command line, e.g., to load the `initrd`).
+3. Boot the kernel natively using `StartImage`.
+
+```ini
+Alpine Linux=\vmlinuz-virt|vmlinuz-virt initrd=\initramfs-virt modules=loop,squashfs,sd-mod,usb-storage console=tty0 quiet
+```
+
 ### Linking Your Kernel (`linker.ld`)
 
-When writing your own kernel, your linker script (`linker.ld`) can specify any virtual base address (for example, the default `nth` kernel uses `. = 0x100000;` for physical identity mapping at the 1MB mark). 
+When writing your own kernel, your linker script (`linker.ld`) dictates exactly where your kernel expects to execute in virtual memory.
 
-The bootloader dynamically reads the `e_entry` field from the ELF header to determine the entry point. This means you can name your entry function whatever you like (`_start`, `kernel_main`, etc.) as long as it is correctly specified via the `ENTRY()` directive in your linker script.
+Because `nth` automatically creates a **Higher Half Direct Map (HHDM)** and puts you in 64-bit long mode, you should link your kernel in the higher half of the address space. For example, our provided [`example_kernel/linker.ld`](example_kernel/linker.ld) links the kernel at `0xFFFFFFFF80100000` (the classic -2GB higher half mark). This maps cleanly down to the physical `0x100000` (1MB) mark, which safely avoids legacy BIOS areas, IVTs, and memory-mapped IO that clutter the lower 1MB of physical RAM.
 
-### The Handoff Protocol
+Here is the exact reference linker script used by our example kernel:
+
+```ld
+ENTRY(kernel_main)
+OUTPUT_FORMAT(elf64-x86-64)
+OUTPUT_ARCH(i386:x86-64)
+
+SECTIONS
+{
+    /* Set the virtual base load address to the Higher Half */
+    . = 0xFFFFFFFF80100000;
+
+    .text : ALIGN(4K) {
+        *(.text .text.*)
+    }
+
+    .rodata : ALIGN(4K) {
+        *(.rodata .rodata.*)
+    }
+
+    .data : ALIGN(4K) {
+        *(.data .data.*)
+    }
+
+    .bss : ALIGN(4K) {
+        *(COMMON)
+        *(.bss .bss.*)
+    }
+
+    /DISCARD/ : {
+        *(.eh_frame)
+        *(.note .note.*)
+        *(.comment)
+    }
+}
+```
+
+The bootloader dynamically reads the `e_entry` field from your compiled ELF header to determine the entry point. This means you can name your entry function whatever you like (e.g., `_start`, `kmain`, `kernel_main`) as long as you explicitly define it using the `ENTRY()` directive at the top of your linker script.
+
+### The Nth Protocol
 
 When the bootloader transfers control to your kernel's entry point, it passes a pointer to an `NthBootInfo` structure as the first argument (System V ABI, passed in the `%rdi` register).
 
-You should include the following definitions in your kernel code to interface with the bootloader:
+You can find the exact definitions for these structures in [`src/nth_protocol.h`](src/nth_protocol.h). To interface with the bootloader, simply copy this header file into your kernel project and include it:
 
 ```c
-#include <stdint.h>
-
-typedef struct {
-    uint64_t BaseAddress;      // Physical base address of the framebuffer
-    uint64_t BufferSize;       // Size of the framebuffer in bytes
-    uint32_t Width;            // Screen width in pixels
-    uint32_t Height;           // Screen height in pixels
-    uint32_t PixelsPerScanLine;// Pixels per scanline (may include padding)
-} NthFramebuffer;
-
-typedef struct {
-    NthFramebuffer *Framebuffer;
-    void *MemoryMap;           // Pointer to the UEFI Memory Map
-    uint64_t MapSize;          // Total size of the memory map in bytes
-    uint64_t DescriptorSize;   // Size of each memory descriptor entry
-    void *Rsdp;                // Pointer to the ACPI RSDP table (for ACPI 2.0+)
-} NthBootInfo;
+#include "nth_protocol.h"
 ```
 
 Your kernel entry point must accept this parameter. For example:
@@ -166,12 +222,44 @@ void kernel_main(NthBootInfo *boot_info) {
     // Use boot_info->Framebuffer to draw to the screen
     // Parse boot_info->MemoryMap to set up physical memory management
     // Read boot_info->Rsdp to initialize ACPI
-    
+
     while (1) {
         __asm__("hlt");
     }
 }
 ```
 
-> [!Note]
-> By the time your kernel executes, `nth` will have successfully exited UEFI Boot Services and initialized the linear GOP framebuffer. You are in 64-bit long mode without a GDT or IDT set up.
+### Parsing the Memory Map
+
+You might notice that `MemoryMap` is a `void *` instead of an `NthMemoryDescriptor *`. This is because the UEFI specification does not guarantee that the descriptors in the array are contiguous by exactly `sizeof(NthMemoryDescriptor)`. Motherboards often add extra padding bytes between entries. 
+
+To safely iterate the map and find usable RAM without crashing, you **must** use `DescriptorSize` for pointer arithmetic before casting to the struct. Here is how you do it:
+
+```c
+uint64_t num_entries = boot_info->MapSize / boot_info->DescriptorSize;
+
+for (uint64_t i = 0; i < num_entries; i++) {
+    // Calculate the exact byte offset using DescriptorSize
+    void *raw_pointer = (uint8_t *)boot_info->MemoryMap + (i * boot_info->DescriptorSize);
+
+    // Safely cast to our struct
+    NthMemoryDescriptor *desc = (NthMemoryDescriptor *)raw_pointer;
+
+    // Check if this chunk is safe to use as system RAM
+    if (desc->Type == NthEfiConventionalMemory) {
+        // We found usable memory! 
+        // Start: desc->PhysicalStart
+        // Size: desc->NumberOfPages * 4096
+    }
+}
+```
+
+### Memory Mapping & Higher Half Support
+
+Before jumping to your ELF kernel, `nth` automatically creates a new page table (PML4) and exits UEFI Boot Services:
+
+1. **Identity Mapping**: All available physical memory (up to at least 4GB, or the highest physical address reported by UEFI) is identity mapped.
+2. **Higher Half Direct Map (HHDM)**: All physical memory is also mapped to the higher half of the address space starting at `0xFFFF800000000000`.
+3. **Huge Pages**: The mapping uses 2MB huge pages (`PAGE_HUGE`) to minimize TLB usage and page table overhead.
+
+You are placed in **64-bit long mode** with the `CR3` register already pointing to this page table. You do not have a GDT or IDT configured yet.

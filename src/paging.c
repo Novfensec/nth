@@ -56,7 +56,7 @@ void MapPage(UINT64 *PML4, UINT64 VirtualAddress, UINT64 PhysicalAddress, UINT64
     }
 }
 
-UINT64* SetupPaging(EFI_MEMORY_DESCRIPTOR *MemoryMap, UINTN MapSize, UINTN DescriptorSize)
+UINT64 *SetupPaging(EFI_MEMORY_DESCRIPTOR *MemoryMap, UINTN MapSize, UINTN DescriptorSize)
 {
     UINT64 *PML4 = AllocatePageTable();
 
@@ -82,7 +82,7 @@ UINT64* SetupPaging(EFI_MEMORY_DESCRIPTOR *MemoryMap, UINTN MapSize, UINTN Descr
         MapPage(PML4, Addr, Addr, PAGE_PRESENT | PAGE_RW | PAGE_HUGE);
         MapPage(PML4, HHDM_BASE + Addr, Addr, PAGE_PRESENT | PAGE_RW | PAGE_HUGE);
     }
-    
+
     return PML4;
 }
 
