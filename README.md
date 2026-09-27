@@ -4,7 +4,7 @@
 [![Support via PayPal](https://img.shields.io/badge/Support-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://www.paypal.me/KARTAVYASHUKLA)
 [![Support via Wise](https://img.shields.io/badge/Support-Wise-9FE870?style=for-the-badge&logo=wise&labelColor=163300)](https://wise.com/pay/business/kartavyashukla)
 
-`nth` is an open-source UEFI bootloader and the reference implementation for the `nth` boot protocol. It provides a built-in graphical boot manager and seamlessly supports booting both **64-bit custom ELF kernels** and **standard Linux EFI stub kernels**.
+`nth` is an open-source UEFI bootloader and the reference implementation for the `nth` boot protocol. It provides a built-in graphical boot manager and supports booting both **64-bit ELF kernels** and **standard Linux EFI stub kernels**.
 
 ### Screenshots
 ![nth Boot Menu](assets/homepage.png?raw=true "nth Boot Menu")
