@@ -127,14 +127,14 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
         uefi_call_wrapper(BS->Stall, 1, 1000000);
 
         EFI_HANDLE NewImageHandle;
-        
+
         EFI_LOADED_IMAGE *ParentLoadedImage = NULL;
         EFI_GUID lipGuid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
         uefi_call_wrapper(BS->HandleProtocol, 3, ImageHandle, &lipGuid, (VOID **)&ParentLoadedImage);
-        
+
         Print(L"Creating DevicePath...\n");
         uefi_call_wrapper(BS->Stall, 1, 1000000);
-        
+
         EFI_DEVICE_PATH *KernelDevicePath = FileDevicePath(ParentLoadedImage->DeviceHandle, SelectedEntry->KernelPath);
 
         Print(L"Calling BS->LoadImage from DevicePath...\n");
@@ -164,7 +164,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
 
         Print(L"Calling StartImage...\n");
         uefi_call_wrapper(BS->Stall, 1, 1000000);
-        
+
         uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut);
 
         Status = uefi_call_wrapper(BS->StartImage, 3, NewImageHandle, NULL, NULL);
