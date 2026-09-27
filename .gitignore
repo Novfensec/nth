@@ -61,3 +61,4 @@ OVMF_VARS*.fd
 EFI/
 *.img
 *.EFI
+iso_root/
