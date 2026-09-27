@@ -56,3 +56,8 @@ dkms.conf
 
 
 build/
+OVMF_VARS*.fd
+*.iso
+EFI/
+*.img
+*.EFI
