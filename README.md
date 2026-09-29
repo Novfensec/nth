@@ -4,7 +4,7 @@
 [![Support via PayPal](https://img.shields.io/badge/Support-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://www.paypal.me/KARTAVYASHUKLA)
 [![Support via Wise](https://img.shields.io/badge/Support-Wise-9FE870?style=for-the-badge&logo=wise&labelColor=163300)](https://wise.com/pay/business/kartavyashukla)
 
-`nth` is an open-source UEFI bootloader and the reference implementation for the `nth` boot protocol. It provides a built-in graphical boot manager and supports booting both **64-bit ELF kernels** and **standard Linux EFI stub kernels**.
+`nth` is an open-source UEFI Multi-Boot Manager and the reference implementation for the `nth` boot protocol. It provides a built-in graphical menu capable of dual-booting custom OSes alongside major operating systems. It natively supports booting **64-bit ELF kernels**, **standard Linux EFI stub kernels**, and **Windows (via PE/COFF chainloading)**.
 
 ### Screenshots
 ![nth Boot Menu](assets/homepage.png?raw=true "nth Boot Menu")
@@ -17,6 +17,7 @@
 - [Custom Kernels & OS Integration](#custom-kernels--os-integration)
   - [Boot Manager Configuration (`nth.cfg`)](#boot-manager-configuration-nthcfg)
   - [Linux Boot Support](#linux-boot-support)
+  - [Windows Boot Support](#windows-boot-support)
   - [Linking Your Kernel (`linker.ld`)](#linking-your-kernel-linkerld)
   - [The Nth Protocol](#the-nth-protocol)
   - [Parsing the Memory Map](#parsing-the-memory-map)
@@ -28,6 +29,7 @@
 
 ### Supported boot protocols
 * [nth protocol](#the-nth-protocol)
+* PE/COFF Chainloading (Linux EFI stubs, Windows Boot Manager, etc.)
 
 ### Supported filesystems
 * FAT32
@@ -130,7 +132,7 @@ To boot the ISO in VirtualBox, you must enable EFI.
 
 ## Custom Kernels & OS Integration
 
-`nth` can boot any custom OS kernel that adheres to the **nth boot protocol** (via a 64-bit ELF executable) or standard **Linux EFI stub** kernels (via PE/COFF).
+`nth` can boot any custom OS kernel that adheres to the **nth boot protocol** (via a 64-bit ELF executable), standard **Linux EFI stub** kernels, or other standard UEFI applications like the **Windows Boot Manager** (via PE/COFF chainloading).
 
 > [!TIP]
 > If you want a quick start, check out the [nth-c-template](https://github.com/Novfensec/nth-c-template) repository to instantly bootstrap your C kernel development.
@@ -141,7 +143,8 @@ The bootloader features a built-in graphical boot manager. It populates its menu
 
 ```ini
 NTH OS=\kernel.elf
-Alpine Linux=\vmlinuz-virt|vmlinuz-virt initrd=\initramfs-virt modules=loop,squashfs,sd-mod,usb-storage console=tty0 quiet
+Alpine Linux=\vmlinuz-lts|vmlinuz-lts initrd=\initramfs-lts modules=loop,squashfs,sd-mod,usb-storage console=tty0 quiet
+Windows 11=\EFI\BOOT\win_boot.efi
 Memory Tester=\memtest.elf
 ```
 
@@ -149,7 +152,7 @@ If `nth.cfg` is missing or fails to load, the boot manager will default to attem
 
 ### Linux Boot Support
 
-Modern Linux kernels are typically compiled with the EFI stub (acting as PE/COFF UEFI applications). `nth` seamlessly detects these kernels. 
+Modern Linux kernels are typically compiled with the EFI stub (acting as PE/COFF UEFI applications). `nth` detects these kernels. 
 
 When writing an entry for Linux in `nth.cfg`, use the pipe character (`|`) to separate the kernel path from the command line arguments. The bootloader will:
 1. Load the kernel using the UEFI `LoadImage` service.
@@ -159,6 +162,19 @@ When writing an entry for Linux in `nth.cfg`, use the pipe character (`|`) to se
 ```ini
 Alpine Linux=\vmlinuz-virt|vmlinuz-virt initrd=\initramfs-virt modules=loop,squashfs,sd-mod,usb-storage console=tty0 quiet
 ```
+
+### Windows Boot Support
+
+Because the Windows Boot Manager (`bootmgfw.efi` or `bootx64.efi`) is a standard PE/COFF UEFI application, `nth` can chainload it just like a Linux EFI stub. This allows you to include Windows in your `nth` boot menu alongside your custom OS or Linux installations.
+
+To boot Windows, ensure the Windows Boot Manager is present on your EFI partition (e.g., copied to `\EFI\BOOT\win_boot.efi`) and simply add a basic entry to your `nth.cfg`:
+
+```ini
+Windows=\EFI\BOOT\win_boot.efi
+```
+
+> [!IMPORTANT]
+> The Windows Boot Manager will instantly crash and reboot your system if it cannot find its configuration. You must ensure that the `\efi\microsoft\boot\` directory (which contains the `BCD` store and fonts) from your Windows installation/ISO is copied onto the exact same FAT32 partition where `win_boot.efi` is located.
 
 ### Linking Your Kernel (`linker.ld`)
 
