@@ -13,6 +13,7 @@
 - [Setup](#setup)
   - [Prerequisites (Linux / WSL)](#prerequisites-linux--wsl)
 - [Build Instructions](#build-instructions)
+- [Automated ISO Scripts](#automated-iso-scripts)
 - [Booting Manually](#booting-manually)
 - [Custom Kernels & OS Integration](#custom-kernels--os-integration)
   - [Boot Manager Configuration (`nth.cfg`)](#boot-manager-configuration-nthcfg)
@@ -81,6 +82,14 @@ Alternatively, if you only want to build the bootloader and run QEMU directly vi
 ```bash
 ./build_and_run.sh
 ```
+
+## Automated ISO Scripts
+
+If you want to quickly test booting a major operating system, check out the `iso_scripts/` directory. It contains ready-to-use shell scripts that automatically unpack, configure, and repack standard OS images to be booted by `nth`:
+- `mk_alpine_iso.sh`: Generates a custom, bootable Alpine Linux ISO.
+- `mk_windows_iso.sh`: Generates a Windows 10/11 ISO with `nth` acting as the primary boot manager.
+
+For full usage instructions, see the [ISO Scripts README](iso_scripts/README.md).
 
 ## Booting Manually
 
